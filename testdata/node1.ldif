@@ -1,0 +1,15 @@
+dn: ou=node1,dc=test,dc=com
+objectClass: organizationalUnit
+ou: node1
+
+dn: uid=user1,ou=node1,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: User
+sn: One
+uid: user1
+
+dn: ou=node2,dc=test,dc=com
+objectClass: referral
+objectClass: extensibleObject
+ou: node2
+ref: ldap://localhost:3899/ou=node2,dc=test,dc=com

@@ -1,0 +1,26 @@
+version: '3'
+services:
+  node1:
+    image: "osixia/openldap:1.3.0"
+    command: ['--copy-service', '--loglevel=debug']
+    environment:
+      - LDAP_ORGANISATION=Test
+      - LDAP_DOMAIN=test.com
+      - LDAP_BASE_DN=dc=test,dc=com
+      - LDAP_TLS=false
+    ports:
+      - "3898:389"
+    volumes:
+            - "/home/sweidenk/Workspace/go-projects/sweidenk/ldap-referral/testdata/node1.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node1.ldif:Z"
+  node2:
+    image: "osixia/openldap:1.3.0"
+    command: ['--copy-service', '--loglevel=debug']
+    environment:
+      - LDAP_ORGANISATION=Test
+      - LDAP_DOMAIN=test.com
+      - LDAP_BASE_DN=dc=test,dc=com
+      - LDAP_TLS=false
+    ports:
+      - "3899:389"
+    volumes:
+            - "/home/sweidenk/Workspace/go-projects/sweidenk/ldap-referral/testdata/node2.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node1.ldif:Z"
