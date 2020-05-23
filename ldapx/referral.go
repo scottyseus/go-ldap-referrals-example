@@ -1,4 +1,4 @@
-package main
+package ldapx
 
 import (
 	"context"
@@ -7,6 +7,17 @@ import (
 	"net"
 	"net/url"
 )
+
+type CompositeError struct {
+	Errs []error
+}
+
+func (err CompositeError) Error() string {
+	if err.Errs == nil || len(err.Errs) < 1 {
+		return "no errors found"
+	}
+	return "multiple errors found"
+}
 
 type DeepSearchRequest struct {
 	*ldap.SearchRequest
@@ -28,6 +39,8 @@ func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.S
 	entries := make([]*ldap.Entry, 0, 100)
 	result := new(ldap.SearchResult)
 
+	errs := make([]error, 0)
+
 	for {
 		if len(refs) < 1 {
 			break
@@ -37,10 +50,12 @@ func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.S
 		refs = refs[1:]
 		refURL, err := url.Parse(ref)
 		if err != nil {
+			errs = append(errs, err)
 			continue
 		}
-		result, err := requestAll(dialer, refURL, req)
+		result, err := submitRequest(dialer, refURL, req)
 		if err != nil {
+			errs = append(errs, err)
 			continue
 		}
 		if result.Entries != nil {
@@ -49,25 +64,23 @@ func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.S
 		refs = append(refs, result.Referrals...)
 	}
 
+	if len(errs) > 0 {
+		return result, CompositeError{Errs:errs}
+	}
 	return result, nil
 }
 
-func requestAll(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.SearchResult, error) {
+func submitRequest(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.SearchResult, error) {
 	netConn, err:= dialer.Dial("tcp", fmt.Sprintf("%s:%s", ldapURL.Hostname(), ldapURL.Port()))
 	if err != nil {
 		return nil, err
 	}
 	conn := ldap.NewConn(netConn, ldapURL.Scheme == "ldaps")
-
 	if req.Username != "" {
 		err = conn.Bind(req.Username, req.Password)
-		bindReq := ldap.NewSimpleBindRequest(req.Username, req.Password, req.Controls)
-		bindReq.AllowEmptyPassword = req.AllowAnonymousBind
-		conn.SimpleBind(bindReq)
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	return conn.Search(req.SearchRequest)
 }
