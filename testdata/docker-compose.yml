@@ -11,7 +11,7 @@ services:
     ports:
       - "3898:389"
     volumes:
-            - "/home/sweidenk/Workspace/go-projects/sweidenk/ldapx-referral/testdata/node1.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node1.ldif:Z"
+      - "/home/sweidenk/Workspace/go-projects/sweidenk/ldap-referral/testdata/node1.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node.ldif"
   node2:
     image: "osixia/openldap:1.3.0"
     command: ['--copy-service', '--loglevel=debug']
@@ -23,4 +23,4 @@ services:
     ports:
       - "3899:389"
     volumes:
-            - "/home/sweidenk/Workspace/go-projects/sweidenk/ldapx-referral/testdata/node2.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node1.ldif:Z"
+      - "/home/sweidenk/Workspace/go-projects/sweidenk/ldap-referral/testdata/node2.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/node.ldif"

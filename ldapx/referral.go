@@ -6,6 +6,7 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"net"
 	"net/url"
+	"strings"
 )
 
 type CompositeError struct {
@@ -23,6 +24,7 @@ type DeepSearchRequest struct {
 	*ldap.SearchRequest
 	Username, Password string
 	AllowAnonymousBind bool
+	MaxDepth int
 }
 
 // Dialer provides the same interface as net.Dialer and the
@@ -33,12 +35,10 @@ type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
 
-func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.SearchResult, error) {
-	refs := []string{ldapURL.String()}
+func DeepSearch(ldapURL string, req *DeepSearchRequest) (*ldap.SearchResult, error) {
+	refs := []string{ldapURL}
 
 	entries := make([]*ldap.Entry, 0, 100)
-	result := new(ldap.SearchResult)
-
 	errs := make([]error, 0)
 
 	for {
@@ -53,7 +53,12 @@ func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.S
 			errs = append(errs, err)
 			continue
 		}
-		result, err := submitRequest(dialer, refURL, req)
+
+		// The referral URL might look like ldap://test:123/dc=some,dc=dn
+		// where the path (dc=some,dc=dn) is the DN of the referenced entry
+		req.BaseDN = strings.TrimLeft(refURL.Path, "/")
+
+		result, err := submitRequest(refURL, req)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -65,17 +70,21 @@ func DeepSearch(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.S
 	}
 
 	if len(errs) > 0 {
-		return result, CompositeError{Errs:errs}
+		return nil, CompositeError{Errs:errs}
 	}
+
+	result := new(ldap.SearchResult)
+	result.Entries = entries
 	return result, nil
 }
 
-func submitRequest(dialer Dialer, ldapURL *url.URL, req DeepSearchRequest) (*ldap.SearchResult, error) {
-	netConn, err:= dialer.Dial("tcp", fmt.Sprintf("%s:%s", ldapURL.Hostname(), ldapURL.Port()))
+func submitRequest(ldapURL *url.URL, req *DeepSearchRequest) (*ldap.SearchResult, error) {
+	addr := fmt.Sprintf("%s:%s", ldapURL.Hostname(), ldapURL.Port())
+	conn, err := ldap.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	conn := ldap.NewConn(netConn, ldapURL.Scheme == "ldaps")
+
 	if req.Username != "" {
 		err = conn.Bind(req.Username, req.Password)
 		if err != nil {

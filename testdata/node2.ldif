@@ -1,17 +1,11 @@
-# dn: ou=node2,dc=test,dc=com
-# objectClass: organizationalUnit
-# ou: node2
-
-# dn: uid=user2,ou=node2,dc=test,dc=com
-# objectClass: inetOrgPerson
-# cn: User
-# sn: One
-# uid: user2
-
 dn: ou=node2,dc=test,dc=com
-objectClass: referral
-objectClass: extensibleObject
+objectClass: organizationalUnit
 ou: node2
-ref: ldap://localhost:3898/ou=node2,dc=test,dc=com
+
+dn: uid=user2,ou=node2,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: User
+sn: Two
+uid: user2
 
 

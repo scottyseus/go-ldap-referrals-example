@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"github.com/go-ldap/ldap/v3"
 	"ldap-referral/ldapx"
-	"net"
-	"net/url"
-	"time"
 )
 
 func main() {
-	ldapURL, _ := url.Parse("ldap://localhost:3898/dc=test,dc=com");
+	ldapURL := "ldap://localhost:3898/dc=test,dc=com"
 
 	req := ldap.NewSearchRequest(
 		"",
@@ -23,21 +20,27 @@ func main() {
 		[]string{"uid", "dn"},
 		nil)
 
-	dialer := new(net.Dialer)
-
-	dialer.Timeout = time.Second * 4
-
-	results, err := ldapx.DeepSearch(dialer, ldapURL, ldapx.DeepSearchRequest{
+	results, err := ldapx.DeepSearch(ldapURL, &ldapx.DeepSearchRequest{
 		SearchRequest: req,
 		Username:      "cn=admin,dc=test,dc=com",
 		Password:      "admin",
 	})
 
-	fmt.Printf("result: %+v\nerrors: %+v\n", results, err)
+	if results != nil {
+		fmt.Println("results:")
+		for _, entry := range results.Entries {
+			fmt.Printf("\t%+v\n", entry.DN)
+		}
+	}
 
-	if compErr, ok := err.(ldapx.CompositeError); ok {
-		for _, e := range compErr.Errs {
-			fmt.Println("\t" + e.Error())
+	if err != nil {
+		fmt.Println("errors:")
+		if compErr, ok := err.(ldapx.CompositeError); ok {
+			for _, e := range compErr.Errs {
+				fmt.Println("\t" + e.Error())
+			}
+		} else {
+			fmt.Printf("\t%+v\n", err)
 		}
 	}
 }
